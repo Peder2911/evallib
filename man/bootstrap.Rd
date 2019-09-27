@@ -4,7 +4,8 @@
 \alias{bootstrap}
 \title{bootstrap}
 \usage{
-bootstrap(pred, actual, fun, ratio = 0.5, draws = 100, ...)
+bootstrap(pred, actual, fun, ratio = 0.5, draws = 100,
+  replace = TRUE, ...)
 }
 \description{
 Apply \code{fun} to the data \code{n} times.  The data is randomly sampled
