@@ -15,30 +15,27 @@
 #' bootstrap(pred,actual,roc)
 #'
 #' @export
-bootstrap <- function(pred, actual, fun, ratio = 0.5, draws = 100, replace = TRUE, ...){
-   if(ratio>1 | ratio<0) stop(glue::glue("Ratio must be 0-1, not {ratio}"))
+bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
    if(length(pred) != length(actual)) stop("pred and actual must have the same length!")
 
    data <- data.frame(pred = pred,actual = actual)
 
    drawn <- rep(FALSE,nrow(data))
 
-   res <- lapply(1:draws, function(sample){
-      draw <- sample(c(TRUE,FALSE),size = nrow(data),replace = TRUE,
-                     prob = c(ratio,1-ratio))
-
-      if(!replace){
-         draw <- draw & ! drawn
+   base <- call("lapply",
+      X = 1:draws,
+      FUN  = function(sample){
+         # Here is the sampling
+         # Currently doing what pROC and ROCr are doing,
+         # sampling the entire set _with replacement_.
+         data <- data[sample(nrow(data),replace = TRUE),]
+         fun(data$pred,data$actual)
       }
-      drawn <<- drawn | draw
+   )
 
-      if(any(draw)){
-         data <- data[draw,]
-         fun(data$pred,data$actual, ...)
-      } else {
-         NULL
-      }
-   }) 
+   if(parallel){base[[1]] <- parallel::mclapply; base[["mc.cores"]] <- parallel::detectCores() - 1}
+
+   res <- eval(base) 
    res[!is.null(res)]
 }
 
@@ -56,13 +53,12 @@ bootstrap <- function(pred, actual, fun, ratio = 0.5, draws = 100, replace = TRU
 #' bootstrappedROC(pred,actual,roc)
 #'
 #' @export
-bootstrappedROC <- function(pred,actual,...){
+bootstrappedROC <- function(pred,actual, ...){
    rocs <- bootstrap(pred,actual,roc, ...)
    aucs <- lapply(rocs, function(curve){auc(curve$fallout,curve$recall)}) 
 
    matrices <- lapply(rocs, as.matrix)
    cube <- array(do.call(c,matrices), dim = c(dim(matrices[[1]]),length(matrices))) 
-   print(dim(cube))
 
    # make this more flexible..
    probs = c(0.25,0.975)

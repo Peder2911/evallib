@@ -15,12 +15,13 @@
 #' @export
 
 cintervalplot <- function(pred, actual, ...){
-   res <- bootstrappedROC(tdata$pred, tdata$actual)
+   res <- bootstrappedROC(pred, actual, ...)
 
    stacked <- data.frame(fallout = c(res$roc$fallout_025,rev(res$roc$fallout_975)),
                          recall = c(res$roc$recall_975,rev(res$roc$recall_025)))
 
-   ggplot(res$roc,aes (x = fallout_mean, y = recall_mean))+
-      geom_line() +
-      geom_polygon(aes(x = fallout,y = recall), data = stacked, alpha = 0.2)
+   list(plot = ggplot(res$roc,aes (x = fallout_mean, y = recall_mean))+
+               geom_line() +
+               geom_polygon(aes(x = fallout,y = recall), data = stacked, alpha = 0.2),
+        results = res)
 }
