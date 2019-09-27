@@ -9,6 +9,7 @@ LazyData: true
 Imports:
    dplyr,
    magrittr,
+   glue,
    zoo 
 Suggests: testthat
 RoxygenNote: 6.1.1

@@ -163,7 +163,7 @@ roc <- function(p,actual,res = 0.01){
               recall = withConfmat(predicted,actual,recall),
               th = threshold)
       }) %>%
-         bind_rows()
+         dplyr::bind_rows()
 }
 
 #' aucFromPA
