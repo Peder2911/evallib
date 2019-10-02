@@ -46,6 +46,28 @@ withConfmat <- function(p,a,fun){
    fun(confmat(p,a))
 }
 
+#' zerosafeDiv
+#'
+#' Division, with the exception that division by zero yields one.
+#'
+#' @param x A number
+#' @param y A number
+#'
+#' @return A number
+#'
+#' @examples
+#' zerosafeDiv(1,0) 
+#' [1] 1
+#' zerosafeDiv(1,1) 
+#' [1] 1
+zerosafeDiv <- function(x,y){
+   if(y == 0){
+      1
+   } else {
+      x / y
+   }
+}
+
 #' recall
 #' 
 #'
@@ -53,7 +75,7 @@ withConfmat <- function(p,a,fun){
 #' @return The recall value of the predicted and actual values
 #' @export
 recall <- function(confmat){
-   confmat[2,2] / sum(confmat[2,]) 
+   zerosafeDiv(confmat[2,2] , sum(confmat[2,]) )
 }
 
 #' precision 
@@ -63,7 +85,7 @@ recall <- function(confmat){
 #' @return The precision value of the predicted and actual values
 #' @export
 precision <- function(confmat){
-   confmat[2,2] / sum(confmat[,2])
+   zerosafeDiv(confmat[2,2] , sum(confmat[,2]))
 }
 
 #' fallout 
@@ -73,7 +95,7 @@ precision <- function(confmat){
 #' @return The fallout value of the predicted and actual values
 #' @export
 fallout <- function(confmat){
-   confmat[1,2] / sum(confmat[1,])
+   zerosafeDiv(confmat[1,2] , sum(confmat[1,]))
 }
 
 #' accuracy 
@@ -83,7 +105,7 @@ fallout <- function(confmat){
 #' @return The accuracy value of the predicted and actual values
 #' @export
 accuracy <- function(confmat){
-   (confmat[1,1] + confmat[2,2]) / sum(confmat)
+   zerosafeDiv((confmat[1,1] + confmat[2,2]) , sum(confmat))
 }
 
 #' fscore
