@@ -13,8 +13,8 @@ test_that("AUC decreases with", {
 })
 
 test_that("Works like pROC", { 
-   tolerance <- 0.001
-   data <- noisier(n = 10000)
+   tolerance <- 0.005
+   data <- noisier(n = 2000)
    lapply(data,function(dat){
       auc_evallib <- aucFromPA(dat$pred, dat$actual)
       auc_proc <- pROC::auc(dat$actual, dat$pred)

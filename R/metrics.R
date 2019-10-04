@@ -178,14 +178,25 @@ auc <- function(x,y){
 #' roc(predicted,actual)
 #' @export
 #' @importFrom magrittr "%>%"
-roc <- function(p,actual,res = 0.01){
-      lapply(seq(1,0,-res), function(threshold){
-         predicted <- as.numeric(p > threshold)
-         list(fallout = withConfmat(predicted,actual,fallout),
-              recall = withConfmat(predicted,actual,recall),
-              th = threshold)
-      }) %>%
-         dplyr::bind_rows()
+roc <- function(p,actual,res = NULL){
+
+   if(is.null(res)){
+      # Creates thresholds between each unique value of p
+      uniquePredictions <- sort(unique(p), decreasing = TRUE)
+      breaks <- (c(1,uniquePredictions) + c(uniquePredictions,0)) / 2
+   } else if(length(res) == 1) {
+      breaks <- seq(1,0,-res)
+   } else {
+      breaks <- res
+   }
+
+   lapply(breaks, function(threshold){
+      predicted <- as.numeric(p > threshold)
+      list(fallout = withConfmat(predicted,actual,fallout),
+           recall = withConfmat(predicted,actual,recall),
+           th = threshold)
+   }) %>%
+      dplyr::bind_rows()
 }
 
 #' aucFromPA
