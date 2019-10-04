@@ -4,12 +4,14 @@
 \alias{bootstrappedROC}
 \title{bootstrappedROC}
 \usage{
-bootstrappedROC(pred, actual, ...)
+bootstrappedROC(pred, actual, res, draws = 100, ...)
 }
 \arguments{
 \item{pred}{Probability predictions}
 
 \item{actual}{Outcomes}
+
+\item{res}{Resolution of ROC thresholds. A float between 0 and 1.}
 }
 \value{
 A list containing ROC data and AUC with confidence intervals.
@@ -17,6 +19,10 @@ A list containing ROC data and AUC with confidence intervals.
 \description{
 Helper function that makes ROC graph data from predictions and outcomes with
 confidence intervals and standard deviation.
+}
+\details{
+Note that the function requires specification of the resolution, since 
+it must be possible to collapse the results into an array.
 }
 \examples{
 pred <- sample(seq(0,1,0.001), size = 150, replace = TRUE)

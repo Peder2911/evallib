@@ -3,6 +3,7 @@
 export(accuracy)
 export(auc)
 export(aucFromPA)
+export(aucWithCI)
 export(bootstrap)
 export(bootstrappedROC)
 export(categorizeClasf)

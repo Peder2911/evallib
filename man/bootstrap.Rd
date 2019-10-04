@@ -6,6 +6,22 @@
 \usage{
 bootstrap(pred, actual, fun, draws = 100, parallel = FALSE, ...)
 }
+\arguments{
+\item{pred}{A vector of predictions}
+
+\item{actual}{A vector of actual values}
+
+\item{fun}{The function to apply}
+
+\item{draws}{Number of iterations}
+
+\item{parallel}{Bool. Run in parallel?}
+
+\item{...}{Arguments passed to fun}
+}
+\value{
+A list containing the results of each iteration
+}
 \description{
 Apply \code{fun} to the data \code{n} times.  The data is randomly sampled
 each time. This yields both more robust results and approximate confidence

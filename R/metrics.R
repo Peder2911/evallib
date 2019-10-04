@@ -180,13 +180,17 @@ auc <- function(x,y){
 #' @importFrom magrittr "%>%"
 roc <- function(p,actual,res = NULL){
 
+   # Figuring out the thresholds to create the ROC curve with:
    if(is.null(res)){
-      # Creates thresholds between each unique value of p
+      # Uses the unique values of p as thresholds 
+      # Creates a thresh. between each unique value
       uniquePredictions <- sort(unique(p), decreasing = TRUE)
       breaks <- (c(1,uniquePredictions) + c(uniquePredictions,0)) / 2
    } else if(length(res) == 1) {
+      # Creates a vector with steps of res 
       breaks <- seq(1,0,-res)
    } else {
+      # Uses the vector res 
       breaks <- res
    }
 
@@ -196,7 +200,8 @@ roc <- function(p,actual,res = NULL){
            recall = withConfmat(predicted,actual,recall),
            th = threshold)
    }) %>%
-      dplyr::bind_rows()
+      dplyr::bind_rows() %>%
+      dplyr::arrange(-th)
 }
 
 #' aucFromPA
@@ -215,6 +220,10 @@ aucFromPA <- function(p,actual, ...){
    roc <- roc(p,actual, ...)
    auc(roc$fallout, roc$recall)
 }
+
+# ================================================
+# Just trash
+# ================================================
 
 either <- function(data,a,b){
    as.numeric(data[[as.character(substitute(a))]] | 

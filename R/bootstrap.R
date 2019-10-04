@@ -7,8 +7,13 @@
 #' function are stochastic. Set the seed with \code{set.seed(n)} for
 #' reproducible results. 
 #'
-#' @param 
-#' @return 
+#' @param pred A vector of predictions
+#' @param actual A vector of actual values 
+#' @param fun The function to apply
+#' @param draws Number of iterations
+#' @param parallel Bool. Run in parallel?
+#' @param ... Arguments passed to fun
+#' @return A list containing the results of each iteration
 #' @examples
 #' pred <- sample(seq(0,1,0.001), size = 150, replace = TRUE)
 #' actual <- sample(c(0,1), size = 150, replace = TRUE)
@@ -16,8 +21,8 @@
 #'
 #' @export
 bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
-   if(length(pred) != length(actual)) stop("pred and actual must have the same length!")
 
+   if(length(pred) != length(actual)) stop("pred and actual must have the same length!")
    data <- data.frame(pred = pred,actual = actual)
 
    drawn <- rep(FALSE,nrow(data))
@@ -29,14 +34,13 @@ bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
          # Currently doing what pROC and ROCr are doing,
          # sampling the entire set _with replacement_.
          data <- data[sample(nrow(data),replace = TRUE),]
-         fun(data$pred,data$actual)
+         fun(data$pred,data$actual, ...)
       }
    )
 
    if(parallel){base[[1]] <- parallel::mclapply; base[["mc.cores"]] <- parallel::detectCores() - 1}
 
-   res <- eval(base) 
-   res[!is.null(res)]
+   eval(base) 
 }
 
 #' bootstrappedROC
@@ -44,8 +48,12 @@ bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
 #' Helper function that makes ROC graph data from predictions and outcomes with
 #' confidence intervals and standard deviation. 
 #'
+#' Note that the function requires specification of the resolution, since 
+#' it must be possible to collapse the results into an array.
+#'
 #' @param pred Probability predictions
 #' @param actual Outcomes
+#' @param res Resolution of ROC thresholds. A float between 0 and 1. 
 #' @return A list containing ROC data and AUC with confidence intervals.
 #' @examples
 #' pred <- sample(seq(0,1,0.001), size = 150, replace = TRUE)
@@ -53,11 +61,13 @@ bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
 #' bootstrappedROC(pred,actual,roc)
 #'
 #' @export
-bootstrappedROC <- function(pred,actual, ...){
-   rocs <- bootstrap(pred,actual,roc, ...)
-   aucs <- lapply(rocs, function(curve){auc(curve$fallout,curve$recall)}) 
+bootstrappedROC <- function(pred, actual, res, draws = 100, ...){
 
+   rocs <- bootstrap(pred,actual,roc, res = seq(0+res,1,res), draws = draws, ...)
+
+   aucs <- lapply(rocs, function(curve){auc(curve$fallout,curve$recall)}) 
    matrices <- lapply(rocs, as.matrix)
+
    cube <- array(do.call(c,matrices), dim = c(dim(matrices[[1]]),length(matrices))) 
 
    # make this more flexible..
@@ -66,7 +76,6 @@ bootstrappedROC <- function(pred,actual, ...){
    aucResult <- list(score = mean(unlist(aucs)),
                      sd = sd(unlist(aucs)),
                      quantiles = quantile(unlist(aucs), probs))
-
 
    fallout_quantiles <- apply(cube[,1,],1,quantile, probs = probs)
    recall_quantiles <- apply(cube[,2,],1,quantile, probs = probs)

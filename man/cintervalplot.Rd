@@ -4,7 +4,7 @@
 \alias{cintervalplot}
 \title{cintervalplot}
 \usage{
-cintervalplot(pred, actual, ...)
+cintervalplot(pred, actual, res = 0.1, parallel = TRUE)
 }
 \arguments{
 \item{pred}{Vector of predictions}

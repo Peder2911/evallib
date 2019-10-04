@@ -4,7 +4,7 @@
 \alias{roc}
 \title{roc}
 \usage{
-roc(p, actual, res = 0.01)
+roc(p, actual, res = NULL)
 }
 \arguments{
 \item{p}{Vector of predicted probabilities}
