@@ -7,15 +7,16 @@
 auc(x, y)
 }
 \arguments{
-\item{x}{The X dimension of the ROC curve; Fallout scores.}
+\item{x}{The X dimension of the metric curve.}
 
-\item{y}{The Y dimension of the ROC curve; Recall scores.}
+\item{y}{The Y dimension of the metric curve.}
 }
 \value{
 An AUC score
 }
 \description{
-Returns the Area Under Curve statistic, which is often used to interpret an ROC curve.
+Returns the Area Under Curve statistic, which is often used to compare
+\code{metricCurve}s.
 }
 \examples{
 predicted <- sample(c(1,0), replace = TRUE, size = 150)

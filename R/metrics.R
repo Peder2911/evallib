@@ -146,10 +146,11 @@ categorizeClasf <- function(pred,act){
 
 #' auc
 #' 
-#' Returns the Area Under Curve statistic, which is often used to interpret an ROC curve.
+#' Returns the Area Under Curve statistic, which is often used to compare
+#' \code{metricCurve}s. 
 #'
-#' @param x The X dimension of the ROC curve; Fallout scores.
-#' @param y The Y dimension of the ROC curve; Recall scores.
+#' @param x The X dimension of the metric curve.
+#' @param y The Y dimension of the metric curve.
 #' @return An AUC score
 #' @examples
 #' predicted <- sample(c(1,0), replace = TRUE, size = 150)
@@ -162,25 +163,37 @@ auc <- function(x,y){
    sum(diff(x) * zoo::rollmean(y,2))
 }
 
-#' roc
+#' metricCurve
 #' 
-#' Creates a data-frame that can be used to plot a ROC curve, or calculate the AUC.
-#' Each row contains a fallout (x) and recall (y) score, that is calculated
-#' with a given threshold for the predicted probabilities, which determines
-#' which predicted values are interpreted as actual positives. 
+#' Creates a Metric Curve dataset, that can be used to create a metric plot,
+#' like a ROC plot or a Precision-recall plot, and calculate AUC. ROC is a
+#' special, widely used case of the MC.
 #'
 #' @param p Vector of predicted probabilities
 #' @param actual Vector of actual scores
-#' @return A data-frame of ROC scores.
+#' @param x A function operating on the 2x2 confusion matrix, yielding a score.
+#' Common functions are precision, recall, fallout and accuracy.
+#' @param y A function operating on the 2x2 confusion matrix, yielding a score.
+#' Common functions are precision, recall, fallout and accuracy.
+#' @param res Specification of the threshold resolution of the curve. Either a
+#' single number, a vector of numbers, or NULL. If a single number, it will be
+#' used as an interval to create thresholds between 0 and 1. If a vector, it
+#' will be used  as the vector of thresholds. If NULL, thresholds will be based
+#' on the unique values of p.
+#' @return A data-frame of metric scores, that can be used to create an
+#' interesting plot, or to calculate the AUC.
 #' @examples
 #' predicted <- sample(seq(0,1,0.01),replace = TRUE, size = 150)
 #' actual <- sample(c(1,0),replace = TRUE, size = 150)
-#' roc(predicted,actual)
+#' metricCurve(predicted, actual, precision, recall)
 #' @export
 #' @importFrom magrittr "%>%"
-roc <- function(p,actual,res = NULL){
 
+metricCurve <- function(p,actual, x, y, res = NULL){
    # Figuring out the thresholds to create the ROC curve with:
+   xFnName <- as.character(substitute(x))
+   yFnName <- as.character(substitute(y))
+
    if(is.null(res)){
       # Uses the unique values of p as thresholds 
       # Creates a thresh. between each unique value
@@ -194,15 +207,73 @@ roc <- function(p,actual,res = NULL){
       breaks <- res
    }
 
+
    lapply(breaks, function(threshold){
       predicted <- as.numeric(p > threshold)
-      list(fallout = withConfmat(predicted,actual,fallout),
-           recall = withConfmat(predicted,actual,recall),
-           th = threshold)
+      res <- list(th = threshold)
+      res[[xFnName]] = withConfmat(predicted,actual,x)
+      res[[yFnName]] = withConfmat(predicted,actual,y)
+      res
    }) %>%
       dplyr::bind_rows() %>%
       dplyr::arrange(-th)
 }
+
+#' roc
+#' 
+#' A special case of the \code{metricCurve} function, which is widely used to
+#' diagnose classifiers. A ROC is simply a curve formed by calculating the
+#' metrics \code{fallout} and \code{recall} for classification values and
+#' actual cases, using different thresholds for the classification values.
+#' 
+#' For implementation, see \code{metricCurve}. 
+#' @param p Vector of predicted probabilities
+#' @param actual Vector of actual scores
+#' @param res Specification of the threshold resolution of the curve. Either a
+#' single number, a vector of numbers, or NULL. If a single number, it will be
+#' used as an interval to create thresholds between 0 and 1. If a vector, it
+#' will be used  as the vector of thresholds. If NULL, thresholds will be based
+#' on the unique values of p.
+#' @return A data-frame of ROC scores.
+#' @examples
+#' predicted <- sample(seq(0,1,0.01),replace = TRUE, size = 150)
+#' actual <- sample(c(1,0),replace = TRUE, size = 150)
+#' metricCurve(predicted, actual, precision, recall)
+#' @export
+#' @importFrom magrittr "%>%"
+#' 
+#' @export
+#' @importFrom magrittr "%>%"
+roc <- function(p,actual,res = NULL){
+   metricCurve(p,actual,x = fallout, y = recall, res = res)
+}
+
+# Old ROC function.
+#roc <- function(p,actual,res = NULL){
+#
+#   # Figuring out the thresholds to create the ROC curve with:
+#   if(is.null(res)){
+#      # Uses the unique values of p as thresholds 
+#      # Creates a thresh. between each unique value
+#      uniquePredictions <- sort(unique(p), decreasing = TRUE)
+#      breaks <- (c(1,uniquePredictions) + c(uniquePredictions,0)) / 2
+#   } else if(length(res) == 1) {
+#      # Creates a vector with steps of res 
+#      breaks <- seq(1,0,-res)
+#   } else {
+#      # Uses the vector res 
+#      breaks <- res
+#   }
+#
+#   lapply(breaks, function(threshold){
+#      predicted <- as.numeric(p > threshold)
+#      list(fallout = withConfmat(predicted,actual,fallout),
+#           recall = withConfmat(predicted,actual,recall),
+#           th = threshold)
+#   }) %>%
+#      dplyr::bind_rows() %>%
+#      dplyr::arrange(-th)
+#}
 
 #' aucFromPA
 #' 

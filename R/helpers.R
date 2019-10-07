@@ -50,7 +50,7 @@ aucWithCI <- function(pred,actual){
    if(requireNamespace("pROC",quietly = TRUE)){
       ci <- pROC::ci.auc(actual,pred)
       list(score = aucFromPA(pred,actual),
-           quantiles = c(ci[1],ci[3]))
+          quantiles = c(ci[1],ci[3]))
    } else {
       stop("This function requires the package pROC")
    }
