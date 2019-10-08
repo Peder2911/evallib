@@ -10,7 +10,8 @@
 #' @param pred A vector of predictions
 #' @param actual A vector of actual values 
 #' @param fun The function to apply
-#' @param draws Number of iterations
+#' @param draws Number of times to randomly sample the data for bootstrapping.
+#' Larger numbers yield better results, but also increase runtime. 
 #' @param parallel Bool. Run in parallel?
 #' @param ... Arguments passed to fun
 #' @return A list containing the results of each iteration
@@ -43,6 +44,74 @@ bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
    eval(base) 
 }
 
+#' bootstrappedMetricCurve
+#' 
+#' Makes \code{metricCurve} data using bootstrapping, which makes it  
+#' possible to calculate the standard deviation, and the quantiles of 
+#' the results.
+#'
+#' Note that the function requires specification of the resolution of the
+#' \code{metricCurve}. This is because each bootstrap iteration must have the
+#' same dimensions, since it must be possible to collapse these into an array.
+#'
+#' @param pred Probability predictions
+#' @param actual Outcomes
+#' @param res Resolution of ROC thresholds. A float between 0 and 1. 
+#' @param draws Number of times to randomly sample the data for bootstrapping.
+#' Larger numbers yield better results, but also increase runtime. 
+#' @param parallel Boolean. Run in parallel? Uses ncores - 1 CPU cores.
+#' @param probs Vector of quantiles to return
+#' @return A list containing ROC data and AUC with confidence intervals.
+#' @examples
+#' tdat <- examplePredictions()
+#' bootstrappedMetricCurve(tdat$pred,tdat$actual,roc)
+#'
+#' @export
+bootstrappedMetricCurve <- function(pred, actual, x, y,
+                                    res = 0.1, draws = 100, parallel = FALSE){
+   xFnName <- as.character(substitute(x))
+   yFnName <- as.character(substitute(y))
+
+   curves <- bootstrap(pred,actual,metricCurve, x = y, y = y,
+                       res = seq(1,0+res,-res), draws = draws, parallel = parallel)
+
+   x_i <- which(names(curves[[1]]) == xFnName)
+   y_i <- which(names(curves[[1]]) == yFnName)
+
+   # make this more flexible..
+   aucs <- lapply(curves, function(curve){auc(curve[[xFnName]],curve[[yFnName]])}) 
+   probs = c(0.25,0.975)
+
+   aucResult <- list(score = mean(unlist(aucs)),
+                     sd = sd(unlist(aucs)),
+                     quantiles = quantile(unlist(aucs), probs))
+
+
+   # ROC stuff
+   matrices <- lapply(curves, as.matrix)
+
+   cube <- array(do.call(c,matrices), dim = c(dim(matrices[[1]]),length(matrices))) 
+
+   fallout_quantiles <- apply(cube[,fallout_i,],1,quantile, probs = probs)
+   recall_quantiles <- apply(cube[,recall_i,],1,quantile, probs = probs)
+
+   rocResult <- data.frame(
+      fallout_mean = apply(cube[,fallout_i,],1,mean),
+      fallout_025 = fallout_quantiles[1,],
+      fallout_975 = fallout_quantiles[2,],
+      fallout_sd = apply(cube[,fallout_i,],1,sd),
+
+      recall_mean = apply(cube[,recall_i,],1,mean),
+      recall_025 = recall_quantiles[1,],
+      recall_975 = recall_quantiles[2,],
+      recall_sd = apply(cube[,recall_i,],1,sd),
+
+      th = cube[,3,1]
+   )
+
+   list(roc = rocResult,auc = aucResult, rocs = rocs) 
+}
+
 #' bootstrappedROC
 #' 
 #' Helper function that makes ROC graph data from predictions and outcomes with
@@ -54,6 +123,8 @@ bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
 #' @param pred Probability predictions
 #' @param actual Outcomes
 #' @param res Resolution of ROC thresholds. A float between 0 and 1. 
+#' @param draws Number of times to randomly sample the data for bootstrapping.
+#' Larger numbers yield better results, but also increase runtime. 
 #' @return A list containing ROC data and AUC with confidence intervals.
 #' @examples
 #' pred <- sample(seq(0,1,0.001), size = 150, replace = TRUE)
@@ -61,11 +132,16 @@ bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
 #' bootstrappedROC(pred,actual,roc)
 #'
 #' @export
-bootstrappedROC <- function(pred, actual, res, draws = 100, ...){
+bootstrappedROC <- function(pred, actual, res, draws = 100, parallel = FALSE){
 
-   rocs <- bootstrap(pred,actual,roc, res = seq(0+res,1,res), draws = draws, ...)
+   rocs <- bootstrap(pred,actual,roc, res = seq(1,0+res,-res), 
+                     draws = draws, parallel = parallel)
+
+   fallout_i <- which(names(rocs[[1]]) == "fallout")
+   recall_i <- which(names(rocs[[1]]) == "recall")
 
    aucs <- lapply(rocs, function(curve){auc(curve$fallout,curve$recall)}) 
+
    matrices <- lapply(rocs, as.matrix)
 
    cube <- array(do.call(c,matrices), dim = c(dim(matrices[[1]]),length(matrices))) 
@@ -77,22 +153,22 @@ bootstrappedROC <- function(pred, actual, res, draws = 100, ...){
                      sd = sd(unlist(aucs)),
                      quantiles = quantile(unlist(aucs), probs))
 
-   fallout_quantiles <- apply(cube[,1,],1,quantile, probs = probs)
-   recall_quantiles <- apply(cube[,2,],1,quantile, probs = probs)
+   fallout_quantiles <- apply(cube[,fallout_i,],1,quantile, probs = probs)
+   recall_quantiles <- apply(cube[,recall_i,],1,quantile, probs = probs)
 
    rocResult <- data.frame(
-      fallout_mean = apply(cube[,1,],1,mean),
+      fallout_mean = apply(cube[,fallout_i,],1,mean),
       fallout_025 = fallout_quantiles[1,],
       fallout_975 = fallout_quantiles[2,],
-      fallout_sd = apply(cube[,1,],1,sd),
+      fallout_sd = apply(cube[,fallout_i,],1,sd),
 
-      recall_mean = apply(cube[,2,],1,mean),
+      recall_mean = apply(cube[,recall_i,],1,mean),
       recall_025 = recall_quantiles[1,],
       recall_975 = recall_quantiles[2,],
-      recall_sd = apply(cube[,1,],1,sd),
+      recall_sd = apply(cube[,recall_i,],1,sd),
 
       th = cube[,3,1]
    )
 
-   list(roc = rocResult,auc = aucResult)
+   list(roc = rocResult,auc = aucResult, rocs = rocs) 
 }
