@@ -22,7 +22,6 @@
 #'
 #' @export
 bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
-   print(rlang::dots_list(...))
 
    if(length(pred) != length(actual)) stop("pred and actual must have the same length!")
    data <- data.frame(pred = pred,actual = actual)
@@ -78,14 +77,12 @@ bootstrappedMetricCurve <- function(pred, actual, x, y,
    curves <- bootstrap(pred,actual,fun = metricCurve,
                        res = seq(1,0+res,-res), draws = draws, parallel = parallel,
                        x = x, y = y)
-   print(curves[[1]])
 
    # make this more flexible..
    aucs <- lapply(curves, function(curve){auc(curve[[xFnName]],curve[[yFnName]])}) 
    aucResult <- list(score = mean(unlist(aucs)),
                      sd = sd(unlist(aucs)),
                      quantiles = quantile(unlist(aucs), probs))
-   print(aucs[[1]])
 
    # ROC stuff
 
@@ -95,10 +92,12 @@ bootstrappedMetricCurve <- function(pred, actual, x, y,
 
 
    matrices <- lapply(curves, as.matrix)
-   print(matrices[[1]])
    cube <- array(do.call(c,matrices), dim = c(dim(matrices[[1]]),length(matrices))) 
 
-   curveResult <- lapply(list(xFnName = x_i, yFnName = y_i), function(index){
+   dolist <- list(x_i, y_i)
+   names(dolist) <- c(xFnName, yFnName)
+
+   curveResult <- lapply(dolist, function(index){
       quantiles <- apply(cube[,index,],1,quantile, probs = probs)
       list(
          mean = apply(cube[,index,],1,mean),
@@ -106,17 +105,16 @@ bootstrappedMetricCurve <- function(pred, actual, x, y,
          q025 = quantiles[1,],
          q975 = quantiles[2,] 
       )
-   }) 
-   curveResult2 <- do.call(cbind, curveResult)
-      #as.data.frame() %>%
-   curveResult3 <- cbind(curveResult2, cube[,th_i,1])
+   }) %>%
+      lapply(dplyr::bind_rows) %>%
+      do.call(cbind, .)
+
 
    #names(curveResult) <- c(sapply(c(xFnName, yFnName),function(funname){
    #   paste0(funname,"_",c("mean","sd","025","975"))
    #}), "th")
 
-   list(res1 = curveResult, res2 = curveResult2,
-        res3 = curveResult3, auc = aucResult) 
+   list(curve = curveResult, auc = aucResult) 
 }
 
 #' bootstrappedROC
