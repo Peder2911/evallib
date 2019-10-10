@@ -13,7 +13,8 @@ bootstrap(pred, actual, fun, draws = 100, parallel = FALSE, ...)
 
 \item{fun}{The function to apply}
 
-\item{draws}{Number of iterations}
+\item{draws}{Number of times to randomly sample the data for bootstrapping.
+Larger numbers yield better results, but also increase runtime.}
 
 \item{parallel}{Bool. Run in parallel?}
 

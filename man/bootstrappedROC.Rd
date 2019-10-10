@@ -4,7 +4,7 @@
 \alias{bootstrappedROC}
 \title{bootstrappedROC}
 \usage{
-bootstrappedROC(pred, actual, res, draws = 100, ...)
+bootstrappedROC(pred, actual, res, draws = 100, parallel = FALSE)
 }
 \arguments{
 \item{pred}{Probability predictions}
@@ -12,6 +12,9 @@ bootstrappedROC(pred, actual, res, draws = 100, ...)
 \item{actual}{Outcomes}
 
 \item{res}{Resolution of ROC thresholds. A float between 0 and 1.}
+
+\item{draws}{Number of times to randomly sample the data for bootstrapping.
+Larger numbers yield better results, but also increase runtime.}
 }
 \value{
 A list containing ROC data and AUC with confidence intervals.

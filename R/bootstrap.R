@@ -22,6 +22,7 @@
 #'
 #' @export
 bootstrap <- function(pred, actual, fun, draws = 100, parallel = FALSE, ...){
+   print(rlang::dots_list(...))
 
    if(length(pred) != length(actual)) stop("pred and actual must have the same length!")
    data <- data.frame(pred = pred,actual = actual)
@@ -72,44 +73,50 @@ bootstrappedMetricCurve <- function(pred, actual, x, y,
    xFnName <- as.character(substitute(x))
    yFnName <- as.character(substitute(y))
 
-   curves <- bootstrap(pred,actual,metricCurve, x = y, y = y,
-                       res = seq(1,0+res,-res), draws = draws, parallel = parallel)
+   probs = c(0.25,0.975)
 
-   x_i <- which(names(curves[[1]]) == xFnName)
-   y_i <- which(names(curves[[1]]) == yFnName)
+   curves <- bootstrap(pred,actual,fun = metricCurve,
+                       res = seq(1,0+res,-res), draws = draws, parallel = parallel,
+                       x = x, y = y)
+   print(curves[[1]])
 
    # make this more flexible..
    aucs <- lapply(curves, function(curve){auc(curve[[xFnName]],curve[[yFnName]])}) 
-   probs = c(0.25,0.975)
-
    aucResult <- list(score = mean(unlist(aucs)),
                      sd = sd(unlist(aucs)),
                      quantiles = quantile(unlist(aucs), probs))
-
+   print(aucs[[1]])
 
    # ROC stuff
-   matrices <- lapply(curves, as.matrix)
 
+   x_i <- which(names(curves[[1]]) == "x")
+   y_i <- which(names(curves[[1]]) == "y")
+   th_i <- which(names(curves[[1]]) == "th")
+
+
+   matrices <- lapply(curves, as.matrix)
+   print(matrices[[1]])
    cube <- array(do.call(c,matrices), dim = c(dim(matrices[[1]]),length(matrices))) 
 
-   fallout_quantiles <- apply(cube[,fallout_i,],1,quantile, probs = probs)
-   recall_quantiles <- apply(cube[,recall_i,],1,quantile, probs = probs)
+   curveResult <- lapply(list(xFnName = x_i, yFnName = y_i), function(index){
+      quantiles <- apply(cube[,index,],1,quantile, probs = probs)
+      list(
+         mean = apply(cube[,index,],1,mean),
+         sd = apply(cube[,index,],1,sd),
+         q025 = quantiles[1,],
+         q975 = quantiles[2,] 
+      )
+   }) 
+   curveResult2 <- do.call(cbind, curveResult)
+      #as.data.frame() %>%
+   curveResult3 <- cbind(curveResult2, cube[,th_i,1])
 
-   rocResult <- data.frame(
-      fallout_mean = apply(cube[,fallout_i,],1,mean),
-      fallout_025 = fallout_quantiles[1,],
-      fallout_975 = fallout_quantiles[2,],
-      fallout_sd = apply(cube[,fallout_i,],1,sd),
+   #names(curveResult) <- c(sapply(c(xFnName, yFnName),function(funname){
+   #   paste0(funname,"_",c("mean","sd","025","975"))
+   #}), "th")
 
-      recall_mean = apply(cube[,recall_i,],1,mean),
-      recall_025 = recall_quantiles[1,],
-      recall_975 = recall_quantiles[2,],
-      recall_sd = apply(cube[,recall_i,],1,sd),
-
-      th = cube[,3,1]
-   )
-
-   list(roc = rocResult,auc = aucResult, rocs = rocs) 
+   list(res1 = curveResult, res2 = curveResult2,
+        res3 = curveResult3, auc = aucResult) 
 }
 
 #' bootstrappedROC

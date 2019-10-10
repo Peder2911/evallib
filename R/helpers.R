@@ -29,7 +29,7 @@ cintervalplot2 <- function(pred, actual, x, y,
    res <- bootstrappedMetricCurve(pred, actual, x = x, y = y, 
                                   res = res, parallel = parallel, draws = draws)
 
-   res$roc <- res$roc[order(res$roc$th),]
+   res$curve <- res$curve[order(res$roc$th),]
    
    points <- roc(pred,actual,c(0,0.3,0.5,1))
    points <- points[c(2,3),]
