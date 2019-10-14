@@ -29,21 +29,26 @@ cintervalplot2 <- function(pred, actual, x, y,
    res <- bootstrappedMetricCurve(pred, actual, x = x, y = y, 
                                   res = res, parallel = parallel, draws = draws)
 
-   res$curve <- res$curve[order(res$roc$th),]
+   res$curve <- res$curve[order(res$curve$th),]
    
-   points <- roc(pred,actual,c(0,0.3,0.5,1))
+   points <- metricCurve(pred,actual,x=x,y=y,res = c(0,0.3,0.5,1))
    points <- points[c(2,3),]
 
-   stacked <- data.frame(fallout = c(res$roc$fallout_025,rev(res$roc$fallout_975)),
-                         recall = c(res$roc$recall_975,rev(res$roc$recall_025)))
+   stacked <- data.frame(x = c(res$curve$x.q025,rev(res$curve$x.q975)),
+                         y = c(res$curve$y.q975,rev(res$curve$y.q025)))
+   
 
-   list(plot = ggplot2::ggplot(res$roc,ggplot2::aes(x = fallout_mean, y = recall_mean))+
+   list(plot = ggplot2::ggplot(res$curve,ggplot2::aes(x = x.mean, y = y.mean))+
                ggplot2::geom_path() +
-               ggplot2::geom_polygon(ggplot2::aes(x = fallout,y = recall), data = stacked, alpha = 0.2) +
-               ggplot2::geom_point(ggplot2::aes(x =fallout, y = recall), data = points, size = 2, color = "red") +
-               ggplot2::geom_text(ggplot2::aes(x =fallout, y = recall, label = as.character(th)), data = points, 
+               ggplot2::geom_polygon(ggplot2::aes(x = x,y = y), data = stacked, alpha = 0.2) +
+               #ggplot2::geom_path(ggplot2::aes(x = x.q975, y = y.q025))+
+               #ggplot2::geom_path(ggplot2::aes(x = x.q025, y = y.q975))+
+               ggplot2::geom_point(ggplot2::aes(x = x, y = y), data = points, 
+                                   color = "red", size = 4) +
+               ggplot2::geom_text(ggplot2::aes(x =x, y = y, label = as.character(th)), data = points, 
                                   nudge_x = 0.05, nudge_y = -0.03, size = 5, color = "red"),
-        results = res)
+        results = res,
+        stacked = stacked)
 }
 
 

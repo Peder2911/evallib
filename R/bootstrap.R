@@ -71,11 +71,12 @@ bootstrappedMetricCurve <- function(pred, actual, x, y,
                                     res = 0.1, draws = 100, parallel = FALSE){
    xFnName <- as.character(substitute(x))
    yFnName <- as.character(substitute(y))
+   thresholds <- seq(1,0+res,-res) 
 
    probs = c(0.25,0.975)
 
    curves <- bootstrap(pred,actual,fun = metricCurve,
-                       res = seq(1,0+res,-res), draws = draws, parallel = parallel,
+                       res = thresholds, draws = draws, parallel = parallel,
                        x = x, y = y)
 
    # make this more flexible..
@@ -108,6 +109,8 @@ bootstrappedMetricCurve <- function(pred, actual, x, y,
    }) %>%
       lapply(dplyr::bind_rows) %>%
       do.call(cbind, .)
+
+   curveResult$th <- thresholds
 
 
    #names(curveResult) <- c(sapply(c(xFnName, yFnName),function(funname){
